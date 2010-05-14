@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 
 #include <libmemcached/memcached.h>
@@ -14,6 +15,19 @@
 #define NUM_ITEMS 10000
 #define MAX_INCR 100
 #define MAX_SIZE 8193
+
+#define PRINT_SCHED 5
+
+int counter = 0;
+bool signaled = false;
+
+static int incr_counter(int by) {
+    return __sync_add_and_fetch(&counter, by);
+}
+
+static void signal_handler(int sig) {
+    __sync_bool_compare_and_swap(&signaled, false, true);
+}
 
 class Item {
 public:
@@ -58,12 +72,30 @@ public:
 
     }
 
+    void maybeReport(void) {
+        if(__sync_bool_compare_and_swap(&signaled, true, false)) {
+
+            int oldval = incr_counter(0);
+            incr_counter(0 - oldval);
+
+            double persec = (double)oldval / (double)PRINT_SCHED;
+            time_t t = time(NULL);
+
+            std::cout << std::setw(2) << persec << "/s"
+                      << "\t" << ctime(&t);
+
+            alarm(PRINT_SCHED);
+        }
+    }
+
     void hurtEm(void) {
         while (true) {
             std::random_shuffle(items.begin(), items.end());
             std::vector<Item*>::iterator it;
             for (it = items.begin(); it != items.end(); ++it) {
                 Item *i = *it;
+
+                maybeReport();
 
                 send(i);
 
@@ -79,6 +111,7 @@ private:
                                             i->key.c_str(), i->key.length(),
                                             bigassbuffer, i->len,
                                             0, 0);
+        incr_counter(1);
         if (rc != MEMCACHED_SUCCESS) {
             std::cerr << "Error setting " << i->key << ": "
                       << memcached_strerror(memc, rc) << std::endl;
@@ -137,6 +170,9 @@ int main(int argc, char **argv) {
 
         items.push_back(new Item(buf));
     }
+
+    signal(SIGALRM, signal_handler);
+    alarm(PRINT_SCHED);
 
     MCHammer hammer(server_list, maxIncr, maxSize, items);
     hammer.hurtEm();
