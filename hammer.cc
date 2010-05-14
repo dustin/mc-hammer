@@ -21,10 +21,16 @@
 #define PRINT_SCHED 5
 
 int counter = 0;
+int total_items = 0;
+size_t total_size = 0;
 bool signaled = false;
 
 static int incr_counter(int by) {
     return __sync_add_and_fetch(&counter, by);
+}
+
+static size_t incr_total_size(int by) {
+    return __sync_add_and_fetch(&total_size, by);
 }
 
 static void signal_handler(int sig) {
@@ -38,8 +44,11 @@ public:
     }
 
     void incrementSize(void) {
+        size_t oldlen = len;
         len += (rand() % MAX_INCR);
         len %= MAX_SIZE;
+
+        incr_total_size(len - oldlen);
     }
 
     std::string key;
@@ -85,13 +94,16 @@ public:
         if(__sync_bool_compare_and_swap(&signaled, true, false)) {
 
             int oldval = incr_counter(0);
+            size_t total_size = incr_total_size(0);
+
             incr_counter(0 - oldval);
 
             double persec = (double)oldval / (double)PRINT_SCHED;
+            double avg_size = (double) total_size / (double)total_items;
             time_t t = time(NULL);
 
-            std::cout << std::setw(2) << persec << "/s"
-                      << "\t" << ctime(&t);
+            std::cout << std::setw(2) << persec << "/s, avg size="
+                      << avg_size << "\t" << ctime(&t);
 
             alarm(PRINT_SCHED);
         }
@@ -196,16 +208,23 @@ int main(int argc, char **argv) {
 
         std::vector<Item*> items;
         for (int i = 0; i < numItems / numThreads; ++i) {
+            total_items++;
             items.push_back(generateItem());
         }
-
-        signal(SIGALRM, signal_handler);
-        alarm(PRINT_SCHED);
 
         MCHammer *hammer = new MCHammer(server_list, maxIncr, maxSize, items);
 
         pthread_create(&threads[nt], NULL, launch_thread, hammer);
     }
+
+    signal(SIGALRM, signal_handler);
+    alarm(PRINT_SCHED);
+
+    std::cout << "# threads=" << numThreads
+              << ", total items = " << total_items
+              << ", max size = " << maxSize
+              << ", max incr = " << maxIncr
+              << std::endl;
 
     for (int nt = 0; nt < numThreads; ++nt) {
         pthread_join(threads[nt], NULL);
