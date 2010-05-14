@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sysexits.h>
+#include <pthread.h>
 
 #include <string>
 #include <cassert>
@@ -72,6 +73,13 @@ public:
 
     }
 
+    ~MCHammer() {
+        std::vector<Item*>::iterator it;
+        for (it = items.begin(); it != items.end(); ++it) {
+            delete *it;
+        }
+    }
+
     void maybeReport(void) {
         if(__sync_bool_compare_and_swap(&signaled, true, false)) {
 
@@ -140,9 +148,15 @@ static Item *generateItem() {
     return new Item(buf);
 }
 
+static void* launch_thread(void* arg) {
+    MCHammer *hammer = static_cast<MCHammer*>(arg);
+    hammer->hurtEm();
+    return NULL;
+}
+
 int main(int argc, char **argv) {
 
-    int numThread(1), numItems(NUM_ITEMS), maxIncr(MAX_INCR),
+    int numThreads(1), numItems(NUM_ITEMS), maxIncr(MAX_INCR),
         maxSize(MAX_SIZE), ch(0);
 
     const char *name = argv[0];
@@ -158,6 +172,9 @@ int main(int argc, char **argv) {
         case 's':
             maxSize = atoi(optarg);
             break;
+        case 't':
+            numThreads = atoi(optarg);
+            break;
         default:
             usage(name);
             break;
@@ -172,19 +189,24 @@ int main(int argc, char **argv) {
 
     char *server_list = argv[0];
 
-    std::vector<Item*> items;
-    for (int i = 0; i < numItems; ++i) {
-        items.push_back(generateItem());
+    pthread_t threads[numThreads];
+
+    for (int nt = 0; nt < numThreads; ++nt) {
+
+        std::vector<Item*> items;
+        for (int i = 0; i < numItems; ++i) {
+            items.push_back(generateItem());
+        }
+
+        signal(SIGALRM, signal_handler);
+        alarm(PRINT_SCHED);
+
+        MCHammer *hammer = new MCHammer(server_list, maxIncr, maxSize, items);
+
+        pthread_create(&threads[nt], NULL, launch_thread, hammer);
     }
 
-    signal(SIGALRM, signal_handler);
-    alarm(PRINT_SCHED);
-
-    MCHammer hammer(server_list, maxIncr, maxSize, items);
-    hammer.hurtEm();
-
-    std::vector<Item*>::iterator it;
-    for (it = items.begin(); it != items.end(); ++it) {
-        delete *it;
+    for (int nt = 0; nt < numThreads; ++nt) {
+        pthread_join(threads[nt], NULL);
     }
 }
