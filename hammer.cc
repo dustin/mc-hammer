@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sysexits.h>
 #include <pthread.h>
 
