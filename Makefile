@@ -1,5 +1,6 @@
-CXXFLAGS=-I/usr/local/homebrew/include/
-LDFLAGS=-L/usr/local/homebrew/lib/ -lmemcached
+LIBMC=/usr/local/homebrew/
+CXXFLAGS=-I$(LIBMC)/include/
+LDFLAGS=-L$(LIBMC)/lib/ -lmemcached
 
 hammer: hammer.o
 	$(CXX) -o hammer hammer.o $(LDFLAGS)
