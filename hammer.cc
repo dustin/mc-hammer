@@ -132,12 +132,22 @@ void usage(const char *name) {
     exit(EX_USAGE);
 }
 
+static Item *generateItem() {
+    static int n = 0;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "k%d", n++);
+
+    return new Item(buf);
+}
+
 int main(int argc, char **argv) {
 
-    int numItems(NUM_ITEMS), maxIncr(MAX_INCR), maxSize(MAX_SIZE), ch(0);
+    int numThread(1), numItems(NUM_ITEMS), maxIncr(MAX_INCR),
+        maxSize(MAX_SIZE), ch(0);
+
     const char *name = argv[0];
 
-    while ((ch = getopt(argc, argv, "n:i:s:")) != -1) {
+    while ((ch = getopt(argc, argv, "t:n:i:s:")) != -1) {
         switch(ch) {
         case 'n':
             numItems = atoi(optarg);
@@ -163,12 +173,8 @@ int main(int argc, char **argv) {
     char *server_list = argv[0];
 
     std::vector<Item*> items;
-
     for (int i = 0; i < numItems; ++i) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "k%d", i);
-
-        items.push_back(new Item(buf));
+        items.push_back(generateItem());
     }
 
     signal(SIGALRM, signal_handler);
