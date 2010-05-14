@@ -34,13 +34,13 @@ class MCHammer {
 public:
 
     MCHammer(const char *servers,
-             size_t nitems,
              size_t mincr,
-             size_t msize) : num_items(nitems),
-                             max_incr(mincr),
-                             max_size(msize),
-                             memc(NULL),
-                             bigassbuffer(NULL) {
+             size_t msize,
+             std::vector<Item*> is) : max_incr(mincr),
+                                      max_size(msize),
+                                      memc(NULL),
+                                      bigassbuffer(NULL),
+                                      items(is) {
 
         memc= memcached_create(NULL);
         assert(memc);
@@ -58,7 +58,7 @@ public:
 
     }
 
-    void hurtEm(std::vector<Item *> &items) {
+    void hurtEm(void) {
         while (true) {
             std::random_shuffle(items.begin(), items.end());
             std::vector<Item*>::iterator it;
@@ -85,11 +85,11 @@ private:
         }
     }
 
-    size_t        num_items;
     size_t        max_incr;
     size_t        max_size;
     memcached_st *memc;
     char * bigassbuffer;
+    std::vector<Item*> items;
 };
 
 void usage(const char *name) {
@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
         items.push_back(new Item(buf));
     }
 
-    MCHammer hammer(server_list, numItems, maxIncr, maxSize);
-    hammer.hurtEm(items);
+    MCHammer hammer(server_list, maxIncr, maxSize, items);
+    hammer.hurtEm();
 
     std::vector<Item*>::iterator it;
     for (it = items.begin(); it != items.end(); ++it) {
