@@ -74,6 +74,10 @@ public:
         memcached_server_push(memc, srvrs);
         memcached_server_list_free(srvrs);
 
+        memcached_behavior_set(memc,
+                               MEMCACHED_BEHAVIOR_RCV_TIMEOUT,
+                               1 * 1000 * 1000);
+
         bigassbuffer = static_cast<char *>(malloc(sizeof(char) * max_size));
         assert(bigassbuffer);
 
