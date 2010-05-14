@@ -58,29 +58,29 @@ public:
 
     }
 
-    void hurtEm(std::vector<Item> &items) {
+    void hurtEm(std::vector<Item *> &items) {
         while (true) {
             std::random_shuffle(items.begin(), items.end());
-            std::vector<Item>::iterator it;
+            std::vector<Item*>::iterator it;
             for (it = items.begin(); it != items.end(); ++it) {
-                Item &i = *it;
+                Item *i = *it;
 
                 send(i);
 
-                i.incrementSize();
+                i->incrementSize();
             }
         }
     }
 
 private:
 
-    void send(Item &i) {
+    void send(Item *i) {
         memcached_return rc = memcached_set(memc,
-                                            i.key.c_str(), i.key.length(),
-                                            bigassbuffer, i.len,
+                                            i->key.c_str(), i->key.length(),
+                                            bigassbuffer, i->len,
                                             0, 0);
         if (rc != MEMCACHED_SUCCESS) {
-            std::cerr << "Error setting " << i.key << ": "
+            std::cerr << "Error setting " << i->key << ": "
                       << memcached_strerror(memc, rc) << std::endl;
         }
     }
@@ -129,15 +129,20 @@ int main(int argc, char **argv) {
 
     char *server_list = argv[0];
 
-    std::vector<Item> items;
+    std::vector<Item*> items;
 
     for (int i = 0; i < numItems; ++i) {
         char buf[32];
         snprintf(buf, sizeof(buf), "k%d", i);
 
-        items.push_back(Item(buf));
+        items.push_back(new Item(buf));
     }
 
     MCHammer hammer(server_list, numItems, maxIncr, maxSize);
     hammer.hurtEm(items);
+
+    std::vector<Item*>::iterator it;
+    for (it = items.begin(); it != items.end(); ++it) {
+        delete *it;
+    }
 }
