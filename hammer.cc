@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     for (int nt = 0; nt < numThreads; ++nt) {
 
         std::vector<Item*> items;
-        for (int i = 0; i < numItems; ++i) {
+        for (int i = 0; i < numItems / numThreads; ++i) {
             items.push_back(generateItem());
         }
 
