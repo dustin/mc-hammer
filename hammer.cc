@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 #include <libmemcached/memcached.h>
 
@@ -59,6 +60,7 @@ public:
 
     void hurtEm(std::vector<Item> &items) {
         while (true) {
+            std::random_shuffle(items.begin(), items.end());
             std::vector<Item>::iterator it;
             for (it = items.begin(); it != items.end(); ++it) {
                 Item &i = *it;
