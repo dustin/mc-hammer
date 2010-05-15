@@ -115,7 +115,8 @@ public:
             time_t t = time(NULL);
 
             std::cout << std::setw(2) << persec << "/s, avg size="
-                      << avg_size << "\t" << ctime(&t);
+                      << avg_size << "\t" << ctime(&t)
+                      << std::flush;
 
             alarm(PRINT_SCHED);
         }
