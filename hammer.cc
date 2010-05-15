@@ -39,14 +39,14 @@ static void signal_handler(int sig) {
 
 class Item {
 public:
-    Item(const char *k) : key(k), len(0) {
-        incrementSize();
+    Item(const char *k, int maxIncr, int maxSize) : key(k), len(0) {
+        incrementSize(maxIncr, maxSize);
     }
 
-    void incrementSize(void) {
+    void incrementSize(int maxIncr, int maxSize) {
         size_t oldlen = len;
-        len += (rand() % MAX_INCR);
-        len %= MAX_SIZE;
+        len += (rand() % maxIncr);
+        len %= maxSize;
 
         incr_total_size(len - oldlen);
     }
@@ -132,7 +132,7 @@ public:
 
                 send(i);
 
-                i->incrementSize();
+                i->incrementSize(max_incr, max_size);
             }
         }
     }
@@ -165,13 +165,24 @@ void usage(const char *name) {
     exit(EX_USAGE);
 }
 
-static Item *generateItem() {
-    static int n = 0;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "k%d", n++);
+class ItemGenerator {
+public:
 
-    return new Item(buf);
-}
+    ItemGenerator(int msize, int mincr) : maxSize(msize), maxIncr(mincr), n(0) {}
+
+    Item *operator()(void) {
+        static int n = 0;
+        char buf[32];
+        snprintf(buf, sizeof(buf), "k%d", n++);
+
+        return new Item(buf, maxSize, maxIncr);
+    }
+
+private:
+    int maxSize;
+    int maxIncr;
+    int n;
+};
 
 static void* launch_thread(void* arg) {
     MCHammer *hammer = static_cast<MCHammer*>(arg);
@@ -216,12 +227,14 @@ int main(int argc, char **argv) {
 
     pthread_t threads[numThreads];
 
+    ItemGenerator generator(maxSize, maxIncr);
+
     for (int nt = 0; nt < numThreads; ++nt) {
 
         std::vector<Item*> items;
         for (int i = 0; i < numItems / numThreads; ++i) {
             total_items++;
-            items.push_back(generateItem());
+            items.push_back(generator());
         }
 
         MCHammer *hammer = new MCHammer(server_list, maxIncr, maxSize, items);
