@@ -75,6 +75,8 @@ public:
         memcached_server_list_free(srvrs);
 
         memcached_behavior_set(memc,
+                               MEMCACHED_BEHAVIOR_BUFFER_REQUESTS, 1);
+        memcached_behavior_set(memc,
                                MEMCACHED_BEHAVIOR_RCV_TIMEOUT,
                                1 * 1000 * 1000);
         memcached_behavior_set(memc,
@@ -143,7 +145,7 @@ private:
                                             bigassbuffer, i->len,
                                             0, 0);
         incr_counter(1);
-        if (rc != MEMCACHED_SUCCESS) {
+        if (rc != MEMCACHED_SUCCESS && rc != MEMCACHED_BUFFERED) {
             std::cerr << "Error setting " << i->key << ": "
                       << memcached_strerror(memc, rc) << std::endl;
         }
