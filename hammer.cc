@@ -230,13 +230,11 @@ int main(int argc, char **argv) {
 
     ItemGenerator generator(maxSize, maxIncr);
 
+    int itemsEach = numItems / numThreads;
     for (int nt = 0; nt < numThreads; ++nt) {
-
-        std::vector<Item*> items;
-        for (int i = 0; i < numItems / numThreads; ++i) {
-            total_items++;
-            items.push_back(generator());
-        }
+        std::vector<Item*> items(itemsEach);
+        std::generate_n(items.begin(), itemsEach, generator);
+        total_items += itemsEach;
 
         MCHammer *hammer = new MCHammer(server_list, maxIncr, maxSize, items);
 
