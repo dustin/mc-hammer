@@ -1,5 +1,5 @@
 LIBMC=/usr/local/homebrew/
-CXXFLAGS=-I$(LIBMC)/include/
+CXXFLAGS=-O3 -I$(LIBMC)/include/
 LDFLAGS=-L$(LIBMC)/lib/ -lmemcached
 
 hammer: hammer.o
