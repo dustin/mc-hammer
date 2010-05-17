@@ -20,10 +20,11 @@
 
 #define PRINT_SCHED 5
 
-int counter = 0;
+volatile int counter = 0;
+volatile size_t total_size = 0;
+volatile bool signaled = false;
+
 int total_items = 0;
-size_t total_size = 0;
-bool signaled = false;
 
 static int incr_counter(int by) {
     return __sync_add_and_fetch(&counter, by);
