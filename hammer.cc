@@ -175,7 +175,6 @@ public:
     ItemGenerator(int msize, int mincr) : maxSize(msize), maxIncr(mincr), n(0) {}
 
     Item *operator()(void) {
-        static int n = 0;
         char buf[32];
         snprintf(buf, sizeof(buf), "k%d", n++);
 
