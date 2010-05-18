@@ -101,6 +101,8 @@ public:
         for (it = items.begin(); it != items.end(); ++it) {
             delete *it;
         }
+        free(bigassbuffer);
+        memcached_free(memc);
     }
 
     void maybeReport(void) {
