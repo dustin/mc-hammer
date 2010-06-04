@@ -90,7 +90,7 @@ public:
         bigassbuffer = static_cast<char *>(malloc(sizeof(char) * max_size));
         assert(bigassbuffer);
 
-        for (int i = 0; i < sizeof(bigassbuffer); ++i) {
+        for (int i = 0; i < (sizeof(char) * max_size); ++i) {
             bigassbuffer[i] = 0xff & rand();
         }
 
