@@ -185,6 +185,8 @@ private:
     int maxSize;
     int maxIncr;
     int n;
+    ItemGenerator(const ItemGenerator&);
+    void operator=(const ItemGenerator&);
 };
 
 static void* launch_thread(void* arg) {
