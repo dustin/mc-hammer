@@ -164,7 +164,8 @@ private:
 
 void usage(const char *name) {
     std::cerr << "Usage:  " << name
-              << " [-n num_items] [-i max_incr] [-s max_size] server_list"
+              << " [-n num_items] [-i max_incr] [-s max_size]"
+              << " [-t threads] server_list"
               << std::endl;
     exit(EX_USAGE);
 }
