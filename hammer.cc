@@ -35,6 +35,7 @@ static size_t incr_total_size(int by) {
 }
 
 static void signal_handler(int sig) {
+    (void)sig;
     __sync_bool_compare_and_swap(&signaled, false, true);
 }
 
@@ -90,7 +91,7 @@ public:
         bigassbuffer = static_cast<char *>(malloc(sizeof(char) * max_size));
         assert(bigassbuffer);
 
-        for (int i = 0; i < (sizeof(char) * max_size); ++i) {
+        for (unsigned long i = 0; i < (sizeof(char) * max_size); ++i) {
             bigassbuffer[i] = 0xff & rand();
         }
 
@@ -109,12 +110,12 @@ public:
         if(__sync_bool_compare_and_swap(&signaled, true, false)) {
 
             int oldval = incr_counter(0);
-            size_t total_size = incr_total_size(0);
+            size_t tsize = incr_total_size(0);
 
             incr_counter(0 - oldval);
 
             double persec = (double)oldval / (double)PRINT_SCHED;
-            double avg_size = (double) total_size / (double)total_items;
+            double avg_size = (double) tsize / (double)total_items;
             time_t t = time(NULL);
 
             std::cout << std::setw(2) << persec << "/s, avg size="
@@ -162,7 +163,7 @@ private:
     std::vector<Item*> items;
 };
 
-void usage(const char *name) {
+static void usage(const char *name) {
     std::cerr << "Usage:  " << name
               << " [-n num_items] [-i max_incr] [-s max_size]"
               << " [-t threads] server_list"
@@ -231,7 +232,7 @@ int main(int argc, char **argv) {
 
     char *server_list = argv[0];
 
-    pthread_t threads[numThreads];
+    pthread_t *threads = new pthread_t[numThreads];
 
     ItemGenerator generator(maxSize, maxIncr);
 
@@ -261,4 +262,5 @@ int main(int argc, char **argv) {
     for (int nt = 0; nt < numThreads; ++nt) {
         pthread_join(threads[nt], NULL);
     }
+    delete []threads;
 }
