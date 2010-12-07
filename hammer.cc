@@ -14,6 +14,14 @@
 
 #include <libmemcached/memcached.h>
 
+#ifdef __sun
+#include <atomic.h>
+#endif
+
+#if !defined(__GNUC__) && !defined(__sun)
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 #define NUM_ITEMS 10000
 #define MAX_INCR 100
 #define MAX_SIZE 8193
@@ -27,16 +35,62 @@ volatile bool signaled = false;
 int total_items = 0;
 
 static int incr_counter(int by) {
+#ifdef __GNUC__
     return __sync_add_and_fetch(&counter, by);
+#elif defined(__sun)
+    return atomic_add_int_nv((volatile uint_t*)&counter, by);
+#else
+    int ret;
+    pthrad_mutex_lock(&mutex);
+    counter += by;
+    ret = counter;
+    pthrad_mutex_unlock(&mutex);
+    return ret;
+#endif
 }
 
 static size_t incr_total_size(int by) {
+#ifdef __GNUC__
     return __sync_add_and_fetch(&total_size, by);
+#elif defined(__sun)
+#ifdef _LP64
+    return atomic_add_64_nv((volatile uint64_t*)&total_size, by);
+#else
+    return atomic_add_32_nv((volatile uint32_t*)&total_size, by);
+#endif
+#else
+    pthrad_mutex_lock(&mutex);
+    total_size += by;
+    pthrad_mutex_unlock(&mutex);
+    return total_size;
+#endif
 }
 
-static void signal_handler(int sig) {
-    (void)sig;
-    __sync_bool_compare_and_swap(&signaled, false, true);
+bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
+#ifdef __GNUC__
+    __sync_bool_compare_and_swap(dst, false, true);
+#elif defined(__sun)
+    bool ret = *dst;
+    atomic_cas_8((volatile uint8_t*)&dst, (uint8_t)old, (uint8_t)n);
+    return dst;
+#else
+    pthrad_mutex_lock(&mutex);
+    bool ret = *dst;
+    if (*dst == old) {
+       *dst = n;
+    }
+    pthrad_mutex_unlock(&mutex);
+    return ret;
+#endif
+
+}
+
+
+extern "C" {
+   static void signal_handler(int sig) {
+      (void)sig;
+      sync_bool_compare_and_swap(&signaled, false, true);
+   }
 }
 
 class Item {
@@ -107,7 +161,7 @@ public:
     }
 
     void maybeReport(void) {
-        if(__sync_bool_compare_and_swap(&signaled, true, false)) {
+        if(sync_bool_compare_and_swap(&signaled, true, false)) {
 
             int oldval = incr_counter(0);
             size_t tsize = incr_total_size(0);
@@ -191,10 +245,12 @@ private:
     void operator=(const ItemGenerator&);
 };
 
-static void* launch_thread(void* arg) {
-    MCHammer *hammer = static_cast<MCHammer*>(arg);
-    hammer->hurtEm();
-    return NULL;
+extern "C" {
+   static void* launch_thread(void* arg) {
+      MCHammer *hammer = static_cast<MCHammer*>(arg);
+      hammer->hurtEm();
+      return NULL;
+   }
 }
 
 int main(int argc, char **argv) {

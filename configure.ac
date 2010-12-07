@@ -11,9 +11,6 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBMEMCACHED
 
-AS_IF(test "$GCC" != "yes",
-      [AC_MSG_ERROR([mc hammer use gcc specific extensions])])
-
 dnl ----------------------------------------------------------------------------
 
 AC_CONFIG_FILES(Makefile)
