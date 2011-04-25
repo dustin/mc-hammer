@@ -68,7 +68,9 @@ static size_t incr_total_size(int by) {
 
 bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
 #ifdef __GNUC__
-    __sync_bool_compare_and_swap(dst, false, true);
+    (void)old;
+    (void)n;
+    return __sync_bool_compare_and_swap(dst, false, true);
 #elif defined(__sun)
     bool ret = *dst;
     atomic_cas_8((volatile uint8_t*)&dst, (uint8_t)old, (uint8_t)n);
