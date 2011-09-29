@@ -41,6 +41,7 @@ static volatile bool signaled = false;
 
 static int total_items(0);
 static int num_secs(0);
+static int max_seconds(std::numeric_limits<int>::max());
 
 static int incr_counter(int by) {
 #ifdef __GNUC__
@@ -184,6 +185,10 @@ private:
                   << ctime(&t)
                   << std::flush;
 
+        if (num_secs >= max_seconds) {
+            exit(0);
+        }
+
         alarm(PRINT_SCHED);
     }
 
@@ -322,7 +327,7 @@ extern "C" {
 
 static void usage(const char *name) {
     std::cerr << "Usage:  " << name
-              << " [-n num_items] [-s max_size]"
+              << " [-n num_items] [-s max_size] [-T max_seconds]"
               << " [-t threads] server_list"
               << std::endl;
     exit(EX_USAGE);
@@ -332,7 +337,7 @@ int main(int argc, char **argv) {
     int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), ch(0);
     const char *port("11211");
 
-    while ((ch = getopt(argc, argv, "t:n:s:p:")) != -1) {
+    while ((ch = getopt(argc, argv, "t:n:s:p:T:")) != -1) {
         switch(ch) {
         case 'n':
             numItems = atoi(optarg);
@@ -342,6 +347,9 @@ int main(int argc, char **argv) {
             break;
         case 't':
             numThreads = atoi(optarg);
+            break;
+        case 'T':
+            max_seconds = atoi(optarg);
             break;
         case 'p':
             port = optarg;
