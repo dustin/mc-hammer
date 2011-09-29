@@ -35,11 +35,12 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define PRINT_SCHED 5
 
-volatile int counter = 0;
-volatile size_t total_size = 0;
-volatile bool signaled = false;
+static volatile int counter = 0;
+static volatile size_t total_size = 0;
+static volatile bool signaled = false;
 
-int total_items = 0;
+static int total_items(0);
+static int num_secs(0);
 
 static int incr_counter(int by) {
 #ifdef __GNUC__
@@ -176,7 +177,10 @@ private:
         double persec = (double)oldval / (double)PRINT_SCHED;
         time_t t = time(NULL);
 
-        std::cout << std::setw(2) << persec << "/s "
+        num_secs += PRINT_SCHED;
+
+        std::cout << std::setw(2) << num_secs << "\t"
+                  << persec << "\t"
                   << ctime(&t)
                   << std::flush;
 
