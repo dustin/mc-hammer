@@ -93,7 +93,7 @@ public:
         packet.message.header.request.opcode = PROTOCOL_BINARY_CMD_SETQ;
         packet.message.header.request.keylen = htons(key.size());
         packet.message.header.request.extlen = 8; // MAGIC
-        packet.message.header.request.vbucket = vbucket;
+        packet.message.header.request.vbucket = htons(vbucket);
         packet.message.header.request.bodylen = htonl(datalen + key.size() + 8);
         packet.message.header.request.opaque = htonl(++OPAQUE);
 
@@ -299,19 +299,20 @@ private:
 class ItemGenerator {
 public:
 
-    ItemGenerator(int msize) : maxSize(msize), n(0) {}
+    ItemGenerator(int msize, int vb) : maxSize(msize), vbuckets(vb), n(0) {}
 
     Item *operator()(void) {
         char buf[32];
         snprintf(buf, sizeof(buf), "k%d", n++);
 
-        uint16_t vbucket(0);
+        uint16_t vbucket(rand() % vbuckets);
 
         return new Item(buf, vbucket, maxSize);
     }
 
 private:
     int maxSize;
+    int vbuckets;
     int n;
     ItemGenerator(const ItemGenerator&);
     void operator=(const ItemGenerator&);
@@ -327,20 +328,23 @@ extern "C" {
 
 static void usage(const char *name) {
     std::cerr << "Usage:  " << name
-              << " [-n num_items] [-s max_size] [-T max_seconds]"
-              << " [-t threads] server_list"
+              << " [-n num_items] [-V num_vbuckets] [-s max_size]"
+              << " [-T max_seconds] [-t threads] server_list"
               << std::endl;
     exit(EX_USAGE);
 }
 
 int main(int argc, char **argv) {
-    int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), ch(0);
+    int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), numVbuckets(1), ch(0);
     const char *port("11211");
 
-    while ((ch = getopt(argc, argv, "t:n:s:p:T:")) != -1) {
+    while ((ch = getopt(argc, argv, "t:n:s:p:T:V:")) != -1) {
         switch(ch) {
         case 'n':
             numItems = atoi(optarg);
+            break;
+        case 'V':
+            numVbuckets = atoi(optarg);
             break;
         case 's':
             maxSize = atoi(optarg);
@@ -370,7 +374,7 @@ int main(int argc, char **argv) {
 
     pthread_t *threads = new pthread_t[numThreads];
 
-    ItemGenerator generator(maxSize);
+    ItemGenerator generator(maxSize, numVbuckets);
 
     int itemsEach = numItems / numThreads;
     for (int nt = 0; nt < numThreads; ++nt) {
