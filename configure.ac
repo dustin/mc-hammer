@@ -11,6 +11,21 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBMEMCACHED
 
+AC_ARG_WITH([memcached],
+    [AS_HELP_STRING([--with-memcached],
+      [Memcached source location])],
+    [ac_cv_with_memcached="$withval"],
+    [ac_cv_with_memcached=""])
+
+AS_IF(test "x${ac_cv_with_memcached}" != "x",
+      [CPPFLAGS="-I${ac_cv_with_memcached}/include $CPPFLAGS"
+       PATH="${ac_cv_with_memcached}:$PATH"])
+
+AC_CHECK_HEADERS(memcached/protocol_binary.h)
+AS_IF(test "x${ac_cv_header_memcached_protocol_binary_h}" != "xyes",
+      AC_MSG_ERROR([Can't build molly without memcached/protocol_binary.h]))
+
+
 dnl ----------------------------------------------------------------------------
 
 AC_CONFIG_FILES(Makefile)
