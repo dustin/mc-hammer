@@ -337,6 +337,7 @@ static void usage(const char *name) {
 int main(int argc, char **argv) {
     int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), numVbuckets(1), ch(0);
     const char *port("11211");
+    const char *name(argv[0]);
 
     while ((ch = getopt(argc, argv, "t:n:s:p:T:V:")) != -1) {
         switch(ch) {
@@ -359,7 +360,7 @@ int main(int argc, char **argv) {
             port = optarg;
             break;
         default:
-            usage(argv[0]);
+            usage(name);
             break;
         }
     }
@@ -367,7 +368,7 @@ int main(int argc, char **argv) {
     argv += optind;
 
     if (argc != 1) {
-        usage(argv[0]);
+        usage(name);
     }
 
     char *server_name = argv[0];
