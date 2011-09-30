@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
         pthread_create(&threads[nt], NULL, launch_thread, molly);
     }
 
-    signal(SIGALRM, signal_handler);
+    sigset(SIGALRM, signal_handler);
     alarm(PRINT_SCHED);
 
     std::cout << "# threads=" << numThreads
