@@ -25,6 +25,8 @@
 
 #include <memcached/protocol_binary.h>
 
+const char *delimiter = "\t";
+
 using namespace std;
 
 #ifdef __sun
@@ -185,8 +187,8 @@ private:
 
         num_secs += PRINT_SCHED;
 
-        std::cout << std::setw(2) << num_secs << "\t"
-                  << persec << "\t"
+        std::cout << std::setw(2) << num_secs << delimiter
+                  << persec << delimiter
                   << ctime(&t)
                   << std::flush;
 
@@ -334,7 +336,7 @@ extern "C" {
 static void usage(const char *name) {
     std::cerr << "Usage:  " << name
               << " [-n num_items] [-V num_vbuckets] [-s max_size]"
-              << " [-T max_seconds] [-t threads] server_list"
+              << " [-T max_seconds] [-t threads] [-d delimiter] server_list"
               << std::endl;
     exit(EX_USAGE);
 }
@@ -343,7 +345,7 @@ int main(int argc, char **argv) {
     int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), numVbuckets(1), ch(0);
     const char *port("11211");
 
-    while ((ch = getopt(argc, argv, "t:n:s:p:T:V:")) != -1) {
+    while ((ch = getopt(argc, argv, "t:n:s:p:T:V:d:")) != -1) {
         switch(ch) {
         case 'n':
             numItems = atoi(optarg);
@@ -362,6 +364,9 @@ int main(int argc, char **argv) {
             break;
         case 'p':
             port = optarg;
+            break;
+        case 'd':
+            delimiter = optarg;
             break;
         default:
             usage(argv[0]);
