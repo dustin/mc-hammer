@@ -200,7 +200,7 @@ private:
     void send(Item *i) {
         const int N_IOV(3);
         struct iovec iov[N_IOV];
-        iov[0].iov_base = &i->packet;
+        iov[0].iov_base = reinterpret_cast<char*>(i->packet.bytes);
         iov[0].iov_len = sizeof(i->packet);
         iov[1].iov_base = const_cast<char*>(i->key.data());
         iov[1].iov_len = i->key.size();
