@@ -4,6 +4,7 @@
 #include <sysexits.h>
 #include <pthread.h>
 
+#include <limits>
 #include <string>
 #include <cassert>
 #include <cstdlib>
@@ -66,7 +67,7 @@ static size_t incr_total_size(int by) {
 #endif
 }
 
-bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
+static bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
 #ifdef __GNUC__
     return __sync_bool_compare_and_swap(dst, old, n);
 #elif defined(__sun)

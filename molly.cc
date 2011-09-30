@@ -9,10 +9,13 @@
 
 #include <netinet/in.h>
 #include <netdb.h>
+#include <errno.h>
 #include <sys/errno.h>
 #include <netinet/tcp.h>
 
+#include <limits>
 #include <string>
+#include <cstring>
 #include <cassert>
 #include <cstdlib>
 #include <vector>
@@ -21,6 +24,8 @@
 #include <algorithm>
 
 #include <memcached/protocol_binary.h>
+
+using namespace std;
 
 #ifdef __sun
 #include <atomic.h>
@@ -58,7 +63,7 @@ static int incr_counter(int by) {
 #endif
 }
 
-bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
+static bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
 #ifdef __GNUC__
     return __sync_bool_compare_and_swap(dst, old, n);
 #elif defined(__sun)
@@ -225,7 +230,7 @@ private:
 
             if (todo > 0) {
                 if (poll(&pollfd, 1, -1) == 1) {
-                    if (pollfd.revents & (POLLIN | POLLERR) != 0) {
+                    if ((pollfd.revents & (POLLIN | POLLERR)) != 0) {
                         readcomplaints();
                     }
                 }
