@@ -25,6 +25,8 @@ AC_CHECK_HEADERS(memcached/protocol_binary.h)
 AS_IF(test "x${ac_cv_header_memcached_protocol_binary_h}" != "xyes",
       AC_MSG_ERROR([Can't build molly without memcached/protocol_binary.h]))
 
+AC_SEARCH_LIBS(socket, socket)
+AC_SEARCH_LIBS(gethostbyname, nsl)
 
 dnl ----------------------------------------------------------------------------
 
