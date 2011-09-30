@@ -41,10 +41,10 @@ static int incr_counter(int by) {
     return atomic_add_int_nv((volatile uint_t*)&counter, by);
 #else
     int ret;
-    pthrad_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
     counter += by;
     ret = counter;
-    pthrad_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
     return ret;
 #endif
 }
@@ -59,9 +59,9 @@ static size_t incr_total_size(int by) {
     return atomic_add_32_nv((volatile uint32_t*)&total_size, by);
 #endif
 #else
-    pthrad_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
     total_size += by;
-    pthrad_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
     return total_size;
 #endif
 }
@@ -74,12 +74,12 @@ bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
     atomic_cas_8((volatile uint8_t*)&dst, (uint8_t)old, (uint8_t)n);
     return dst;
 #else
-    pthrad_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
     bool ret = *dst;
     if (*dst == old) {
        *dst = n;
     }
-    pthrad_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
     return ret;
 #endif
 

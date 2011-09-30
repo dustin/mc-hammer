@@ -50,10 +50,10 @@ static int incr_counter(int by) {
     return atomic_add_int_nv((volatile uint_t*)&counter, by);
 #else
     int ret;
-    pthrad_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
     counter += by;
     ret = counter;
-    pthrad_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
     return ret;
 #endif
 }
@@ -67,12 +67,12 @@ bool sync_bool_compare_and_swap(volatile bool *dst, bool old, bool n) {
     return dst;
 #else
 
-    pthrad_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
     bool ret = *dst;
     if (*dst == old) {
        *dst = n;
     }
-    pthrad_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
     return ret;
 #endif
 }
