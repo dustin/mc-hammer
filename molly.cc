@@ -281,7 +281,7 @@ private:
 
         if (!connected) {
             std::cerr << "Error connecting" << std::endl;
-            abort();
+            exit(1);
         }
 
         /* Configure non-blocking IO */
