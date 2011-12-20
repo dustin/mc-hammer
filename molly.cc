@@ -161,14 +161,32 @@ public:
 private:
 
     void readcomplaints() {
-        char complaints[1024];
+        protocol_binary_response_header response;
         while (true) {
-            ssize_t r = read(pollfd.fd, complaints, sizeof(complaints));
-            if (r > 0) {
-                complaints[r] = 0;
-                std::cout << "Read " << complaints+24 << std::endl;
-                break;
+            // If we get a status, we're pretty sure it's an error, so
+            // let's go back into blocking mode, read it all out and
+            // exit.
+            int fflags = fcntl(pollfd.fd, F_GETFL);
+            if(fcntl(pollfd.fd, F_SETFL, fflags & ~O_NONBLOCK) < 0) {
+                perror("fcntl");
             }
+
+            ssize_t r = read(pollfd.fd, &response, sizeof(response));
+            assert(r == sizeof(response));
+            char buf[1024];
+
+            r = read(pollfd.fd, buf, response.response.extlen);
+            assert(r == response.response.extlen);
+
+            r = read(pollfd.fd, buf, ntohs(response.response.keylen));
+
+            r = read(pollfd.fd, buf, ntohl(response.response.bodylen));
+
+            buf[r] = '\0';
+
+            std::cout << "Error " << (0xff && ntohs(response.response.status))
+                      << ":  " << buf << std::endl;
+            exit(1);
         }
     }
 
