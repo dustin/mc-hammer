@@ -50,6 +50,7 @@ static volatile bool signaled = false;
 static int total_items(0);
 static int num_secs(0);
 static int max_seconds(std::numeric_limits<int>::max());
+static int delete_percentage(0);
 
 static int incr_counter(int by) {
 #ifdef __GNUC__
@@ -95,22 +96,33 @@ static uint32_t OPAQUE(3);
 
 class Item {
 public:
-    Item(const char *k, uint16_t vbucket, size_t datalen) : key(k) {
+    Item(const char *k, uint16_t vbucket, size_t datalen) : key(k), exists(false) {
         memset(&packet, 0, sizeof(packet));
-        packet.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        packet.message.header.request.opcode = PROTOCOL_BINARY_CMD_SETQ;
-        packet.message.header.request.keylen = htons(key.size());
-        packet.message.header.request.extlen = 8; // MAGIC
-        packet.message.header.request.vbucket = htons(vbucket);
-        packet.message.header.request.bodylen = htonl(datalen + key.size() + 8);
-        packet.message.header.request.opaque = htonl(++OPAQUE);
+        packet.pkt_base.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        packet.pkt_base.message.header.request.opcode = PROTOCOL_BINARY_CMD_SETQ;
+        packet.pkt_base.message.header.request.keylen = htons(key.size());
+        packet.pkt_base.message.header.request.extlen = 8; // MAGIC
+        packet.pkt_base.message.header.request.vbucket = htons(vbucket);
+        packet.pkt_base.message.header.request.opaque = htonl(++OPAQUE);
 
-        packet.message.body.flags = htonl(918448);
-        packet.message.body.expiration = 0;
+        packet.pkt_set.message.body.flags = htonl(918448);
+        packet.pkt_set.message.body.expiration = 0;
+
+        computeBodyLen(datalen);
     }
 
-    protocol_binary_request_set packet;
+    void computeBodyLen(size_t datalen) {
+        packet.pkt_base.message.header.request.bodylen = htonl(datalen + key.size() +
+                                                               packet.pkt_base.message.header.request.extlen);
+    }
+
+    union {
+        protocol_binary_request_no_extras pkt_base;
+        protocol_binary_request_set pkt_set;
+        protocol_binary_request_delete pkt_del;
+    } packet;
     std::string key;
+    bool exists;
 };
 
 class Molly {
@@ -221,12 +233,37 @@ private:
     void send(Item *i) {
         const int N_IOV(3);
         struct iovec iov[N_IOV];
-        iov[0].iov_base = reinterpret_cast<char*>(i->packet.bytes);
-        iov[0].iov_len = sizeof(i->packet);
+        long r(random() % 100);
+
+        i->packet.pkt_base.message.header.request.opcode = (r < delete_percentage
+                                                            ? PROTOCOL_BINARY_CMD_DELETEQ
+                                                            : PROTOCOL_BINARY_CMD_SETQ);
+        // but let's make sure we think it's there.
+        if (!i->exists) {
+            i->packet.pkt_base.message.header.request.opcode = PROTOCOL_BINARY_CMD_SETQ;
+        }
+
         iov[1].iov_base = const_cast<char*>(i->key.data());
         iov[1].iov_len = i->key.size();
-        iov[2].iov_base = bigassbuffer;
-        iov[2].iov_len = max_size;
+        switch (i->packet.pkt_base.message.header.request.opcode) {
+        case PROTOCOL_BINARY_CMD_SETQ:
+            i->packet.pkt_base.message.header.request.extlen = 8;
+            iov[0].iov_base = reinterpret_cast<char*>(i->packet.pkt_base.bytes);
+            iov[0].iov_len = sizeof(i->packet.pkt_set);
+            iov[2].iov_base = bigassbuffer;
+            iov[2].iov_len = max_size;
+            break;
+        case PROTOCOL_BINARY_CMD_DELETEQ:
+            i->packet.pkt_base.message.header.request.extlen = 0;
+            iov[0].iov_base = reinterpret_cast<char*>(i->packet.pkt_base.bytes);
+            iov[0].iov_len = sizeof(i->packet.pkt_del);
+            iov[2].iov_len = 0;
+            break;
+        default:
+            abort();
+        }
+
+        i->computeBodyLen(iov[2].iov_len);
 
         size_t todo(0);
         do {
@@ -257,6 +294,8 @@ private:
                 }
             }
         } while(todo > 0);
+
+        i->exists = i->packet.pkt_base.message.header.request.opcode != PROTOCOL_BINARY_CMD_DELETEQ;
     }
 
     void _connect(const char *host, const char *svc) {
@@ -354,7 +393,7 @@ extern "C" {
 
 static void usage(const char *name) {
     std::cerr << "Usage:  " << name
-              << " [-n num_items] [-V num_vbuckets] [-s max_size]"
+              << " [-n num_items] [-V num_vbuckets] [-s max_size] [-D delete_percent]"
               << " [-T max_seconds] [-t threads] [-d delimiter] server_list"
               << std::endl;
     exit(EX_USAGE);
@@ -364,7 +403,7 @@ int main(int argc, char **argv) {
     int numThreads(1), numItems(NUM_ITEMS), maxSize(MAX_SIZE), numVbuckets(1), ch(0);
     const char *port("11211");
 
-    while ((ch = getopt(argc, argv, "t:n:s:p:T:V:d:")) != -1) {
+    while ((ch = getopt(argc, argv, "t:n:s:p:T:V:D:d:")) != -1) {
         switch(ch) {
         case 'n':
             numItems = atoi(optarg);
@@ -383,6 +422,9 @@ int main(int argc, char **argv) {
             break;
         case 'p':
             port = optarg;
+            break;
+        case 'D':
+            delete_percentage = atoi(optarg);
             break;
         case 'd':
             delimiter = optarg;
